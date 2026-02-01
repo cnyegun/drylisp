@@ -1,6 +1,6 @@
 module DryLisp 
         (   Identifier
-        ,   LispExpr
+        ,   LispExpr (..)
         ) where
 
 type Identifier = String
