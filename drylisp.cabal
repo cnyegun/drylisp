@@ -19,7 +19,7 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  DryLisp
+    exposed-modules:  DryLisp, LispParser
     -- other-modules:
     -- other-extensions:
     build-depends:    base ^>=4.18.3.0
@@ -41,13 +41,13 @@ executable drylisp
 test-suite drylisp-test
     import:           warnings
     default-language: Haskell2010
-    -- other-modules:
     -- other-extensions:
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
+    other-modules:    TestLispParser
     build-depends:
         base ^>=4.18.3.0,
         drylisp,
         QuickCheck,
-        hspec,
+        hspec
