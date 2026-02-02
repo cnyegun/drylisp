@@ -83,3 +83,18 @@ spec = describe "LispParser" $ do
             parse idP "+  " `shouldBe` Just (Id "+", "")
         it "parse some name" $ do
             parse idP "string-append \"Hello\" \"World\"" `shouldBe` Just (Id "string-append", "\"Hello\" \"World\"")
+    describe "quoteP" $ do
+        it "fails on empty string" $ do
+            parse quoteP "" `shouldBe` Nothing
+        it "parses quote on a LispNumber" $ do
+            parse quoteP "'42" `shouldBe` Just (List [Id "quote", LispNumber 42], "")
+        it "parses quote on a Id" $ do
+            parse quoteP "'x" `shouldBe` Just (List [Id "quote", Id "x"], "")
+        it "parses empty quote" $ do
+            parse quoteP "'()" `shouldBe` Just (List [Id "quote", List []],"")
+        it "parses a list" $ do
+            parse quoteP "'(1 2)" `shouldBe` Just (List [Id "quote", List [LispNumber 1, LispNumber 2]], "")
+        it "parses a nested list" $ do
+            parse quoteP "'(1 2 '(3 4))" `shouldBe`
+                Just (List [Id "quote", List [LispNumber 1, LispNumber 2,
+                    List [Id "quote", List [LispNumber 3, LispNumber 4]]]], "")

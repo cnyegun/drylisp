@@ -12,6 +12,7 @@ module LispParser
     ,   lispExprP
     ,   idP
     ,   listP
+    ,   quoteP
     ) where
 import DryLisp
 import Data.Char
@@ -76,7 +77,7 @@ tok p = p <* ws
 -- ===================
 
 lispExprP :: Parser LispExpr
-lispExprP = lispBoolP <|> lispStringP <|> lispNumberP <|> idP <|> listP
+lispExprP = lispBoolP <|> lispStringP <|> lispNumberP <|> idP <|> listP <|> quoteP
 
 lispBoolP :: Parser LispExpr
 lispBoolP = trueP <|> falseP
@@ -103,3 +104,9 @@ listP = Parser $ \text -> do
     (xs, rest') <- parse (many lispExprP) rest
     (_, rest'') <- parse (tok $ charP ')') rest'
     Just (List xs, rest'')
+
+quoteP :: Parser LispExpr
+quoteP = Parser $ \text -> do
+    (_, rest) <- parse (satisfy (=='\'')) text
+    (expr, rest') <- parse lispExprP rest
+    Just (List [Id "quote", expr], rest')
