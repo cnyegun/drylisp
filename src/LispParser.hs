@@ -1,17 +1,19 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module LispParser 
+module LispParser
     (   parse
     ,   charP
     ,   stringP
     ,   stringLiteralP
     ,   lispBoolP
     ,   lispStringP
+    ,   lispNumberP
     ) where
 import DryLisp
 import Data.Char
 import Control.Applicative
+import Text.Read
 
 newtype Parser a = Parser { parse :: String -> Maybe (a, String) }
 
@@ -25,7 +27,7 @@ instance Applicative Parser where
     pure :: a -> Parser a
     pure x = Parser $ \text -> Just (x, text)
     (<*>) :: Parser (a -> b) -> Parser a -> Parser b
-    pf <*> pv = Parser $ \text -> do 
+    pf <*> pv = Parser $ \text -> do
         (f, rest) <- parse pf text
         (v, rest') <- parse pv rest
         Just (f v, rest')
@@ -40,7 +42,7 @@ instance Alternative Parser where
             _ -> parse pb text
 
 satisfy :: (Char -> Bool) -> Parser Char
-satisfy fcond = Parser $ \case 
+satisfy fcond = Parser $ \case
     (x:xs) | fcond x -> Just (x, xs)
     _ -> Nothing
 
@@ -58,10 +60,10 @@ lispBoolP :: Parser LispExpr
 lispBoolP = trueP <|> falseP
 
 trueP :: Parser LispExpr
-trueP = tok $ (\_ -> LispBool True) <$> stringP "true" 
+trueP = tok $ (\_ -> LispBool True) <$> stringP "true"
 
 falseP :: Parser LispExpr
-falseP = tok $ (\_ -> LispBool True) <$> stringP "false" 
+falseP = tok $ (\_ -> LispBool True) <$> stringP "false"
 
 ws :: Parser String
 ws = many (satisfy isSpace)
@@ -70,4 +72,10 @@ tok :: Parser a -> Parser a
 tok p = p <* ws
 
 lispStringP :: Parser LispExpr
-lispStringP = tok $ LispString <$> stringLiteralP 
+lispStringP = tok $ LispString <$> stringLiteralP
+
+lispNumberP :: Parser LispExpr
+lispNumberP = tok $ Parser $ \text ->
+    case reads text of 
+        ((n, rest):_) -> Just (LispNumber n, rest)
+        _ -> Nothing

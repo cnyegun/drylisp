@@ -53,3 +53,11 @@ spec = describe "LispParser" $ do
         it "parses normal string" $ do
             property $ \s -> notElem '"' s ==>
                 parse lispStringP ("\"" ++ s ++ "\"") `shouldBe` Just (LispString s, "")
+    describe "lispNumberP" $ do
+        it "fails on empty input" $ do
+            parse lispNumberP "" `shouldBe` Nothing
+        it "parse nonnegative number" $ do
+            parse lispNumberP "34234    end" `shouldBe` Just (LispNumber 34234, "end")
+            parse lispNumberP "0     end" `shouldBe` Just (LispNumber 0, "end")
+        it "parse negative number" $ do
+            parse lispNumberP "-345623   end" `shouldBe` Just (LispNumber (-345623), "end")
