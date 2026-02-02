@@ -18,7 +18,8 @@ spec = describe "TestLispEval" $ do
             eval [] (LispString s) `shouldBe` Right (LispString s)
     it "eval id -> simple name" $ do
         eval [("x", LispNumber 42)] (Id "x") `shouldBe` Right (LispNumber 42)
-        eval [("y", LispNumber 46)] (Id "x") `shouldBe` Left ("Unbound variable: " ++ "x")
+        eval [("y", LispNumber 46)] (Id "x") 
+            `shouldBe` Left ("Unbound variable: " ++ "x")
     it "eval quote -> expression unevaluated" $ do
         eval [] (List [Id "quote", Id "x"]) `shouldBe` Right (Id "x")
         eval [] (List [Id "quote", List [LispNumber 1, LispNumber 2]]) 
@@ -54,8 +55,10 @@ spec = describe "TestLispEval" $ do
         eval [] nested `shouldBe` Right (LispNumber 2)
 
     it "eval if -> wrong number of args is error" $ do
-        eval [] (List [Id "if", LispBool True]) `shouldBe` Left "if requires exactly 3 arguments"
-        eval [] (List [Id "if", LispBool True, LispNumber 1]) `shouldBe` Left "if requires exactly 3 arguments"
+        eval [] (List [Id "if", LispBool True]) 
+            `shouldBe` Left "if requires exactly 3 arguments"
+        eval [] (List [Id "if", LispBool True, LispNumber 1]) 
+            `shouldBe` Left "if requires exactly 3 arguments"
         eval [] (List [Id "if", LispBool True, LispNumber 1, LispNumber 2, LispNumber 3])
             `shouldBe` Left "if requires exactly 3 arguments"
 
@@ -111,8 +114,9 @@ spec = describe "TestLispEval" $ do
     it "lambda -> nested application" $ do
         let add = List [Id "lambda", List [Id "x", Id "y"], 
                         List [Id "+", Id "x", Id "y"]]
-        eval initialEnv (List [add, List [add, LispNumber 1, LispNumber 2], LispNumber 3])
-            `shouldBe` Right (LispNumber 6)
+        eval initialEnv 
+            (List [add, List [add, LispNumber 1, LispNumber 2], LispNumber 3])
+                `shouldBe` Right (LispNumber 6)
 
     it "lambda -> lexical scope captures outer variables" $ do
         let closure = List [Id "lambda", List [Id "x"], 
@@ -151,3 +155,11 @@ spec = describe "TestLispEval" $ do
         case eval initialEnv lam of
             Right (LispClosure _ _) -> True
             _ -> False
+
+    it "cons -> cons an LispExpr with a list" $ do
+        eval initialEnv (List [Id "cons", LispNumber 4, LispNumber 5]) `shouldBe`
+            Left "cons requires the second argument must be a list"
+        eval initialEnv (List [Id "cons", LispNumber 3, List [Id "quote", List []]]) 
+            `shouldBe` Right (List [Id "quote", List [LispNumber 3]])
+        eval initialEnv (List [Id "cons", LispNumber 3, List [Id "quote", List [LispNumber 4]]]) 
+            `shouldBe` Right (List [Id "quote", List [LispNumber 3, LispNumber 4]])

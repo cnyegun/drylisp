@@ -102,6 +102,11 @@ lispMul = LispClosure [] $ \args -> do
     nums <- mapM (\case LispNumber n -> Right n; _ -> Left "* requires numbers") args
     Right (LispNumber (product nums))
 
+lispCons :: LispExpr
+lispCons = LispClosure [] $ \case
+    [x, List xs] -> Right (List [Id "quote", List (x:xs)])
+    _ -> Left "cons requires the second argument must be a list"
+
 -- $ =============== $
 --     initial env
 -- $ =============== $
@@ -110,4 +115,5 @@ initialEnv :: Env
 initialEnv = [ ("+", lispAdd)
              , ("-", lispSub)
              , ("*", lispMul)
+             , ("cons", lispCons)
              ]
