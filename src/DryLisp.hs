@@ -126,7 +126,11 @@ lispEq = LispClosure [] $ \case
     [LispBool   a, LispBool   b] -> Right (LispBool (a == b))
     _                            -> Left "Wrong type for comparison" 
     
-
+lispEmpty :: LispExpr
+lispEmpty = LispClosure [] $ \case
+    [List (_:_)] -> Right (LispBool False)
+    [List []]     -> Right (LispBool True)
+    _             -> Left "Not a list"
 
 -- $ =============== $
 --     initial env
@@ -140,4 +144,6 @@ initialEnv = [ ("+", lispAdd)
              , ("car", lispCar)
              , ("cdr", lispCdr)
              , ("=", lispEq)
+             , ("empty?", lispEmpty)
+             , ("null?", lispEmpty)
              ]

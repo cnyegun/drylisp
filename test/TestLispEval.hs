@@ -245,3 +245,16 @@ spec = describe "TestLispEval" $ do
         eval (initialEnv ++ [("x", LispNumber 3), ("y", LispString "")]) 
             (List [Id "=", Id "x", Id "y"])
                 `shouldBe` Left "Wrong type for comparison"
+    
+    it "checks for empty list" $ do
+        eval initialEnv (List [Id "empty?", LispNumber 3])
+            `shouldBe` Left "Not a list"
+
+        eval initialEnv (List [Id "empty?", List [Id "quote", List []]])
+            `shouldBe` Right (LispBool True)
+
+        eval initialEnv (List [Id "empty?", List [Id "quote", List [LispNumber 3]]])
+            `shouldBe` Right (LispBool False)
+
+        eval initialEnv (List [Id "null?", List [Id "quote", List [LispNumber 3]]])
+            `shouldBe` Right (LispBool False)
