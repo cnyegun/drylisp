@@ -6,7 +6,8 @@ module LispParser
     ,   charP
     ,   stringP
     ,   stringLiteralP
-    ,   boolP
+    ,   lispBoolP
+    ,   lispStringP
     ) where
 import DryLisp
 import Data.Char
@@ -53,8 +54,8 @@ stringP (c:cs) = tok $ (:) <$> charP c <*> stringP cs
 stringLiteralP :: Parser String
 stringLiteralP = tok $ charP '"' *> many (satisfy (/='"')) <* charP '"'
 
-boolP :: Parser LispExpr
-boolP = trueP <|> falseP
+lispBoolP :: Parser LispExpr
+lispBoolP = trueP <|> falseP
 
 trueP :: Parser LispExpr
 trueP = tok $ (\_ -> LispBool True) <$> stringP "true" 
@@ -67,3 +68,6 @@ ws = many (satisfy isSpace)
 
 tok :: Parser a -> Parser a
 tok p = p <* ws
+
+lispStringP :: Parser LispExpr
+lispStringP = undefined

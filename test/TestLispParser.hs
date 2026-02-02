@@ -37,11 +37,11 @@ spec = describe "LispParser" $ do
             parse stringLiteralP "\"\"   " `shouldBe` Just ("", "")
         it "parses on normal string literal" $ do
             parse stringLiteralP "\"eminem\"    jayz" `shouldBe` Just ("eminem", "jayz")
-    describe "boolP" $ do
+    describe "lispBoolP" $ do
         it "fails on empty and other not LispBool input" $ do
-            parse boolP "" `shouldBe` Nothing
-            parse boolP "hihiahah" `shouldBe` Nothing
+            parse lispBoolP "" `shouldBe` Nothing
+            parse lispBoolP "hihiahah" `shouldBe` Nothing
         it "parses a LISP true expression" $ do
-            parse boolP "true  \n((" `shouldBe` Just (LispBool True, "((")
+            parse lispBoolP "true  \n((" `shouldBe` Just (LispBool True, "((")
         it "parses a LISP false expression" $ do
-            parse boolP "false  \r\t()" `shouldBe` Just (LispBool True, "()")
+            parse lispBoolP "false  \r\t()" `shouldBe` Just (LispBool True, "()")
