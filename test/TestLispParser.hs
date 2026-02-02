@@ -61,3 +61,6 @@ spec = describe "LispParser" $ do
             parse lispNumberP "0     end" `shouldBe` Just (LispNumber 0, "end")
         it "parse negative number" $ do
             parse lispNumberP "-345623   end" `shouldBe` Just (LispNumber (-345623), "end")
+        it "parse float" $ do
+            parse lispNumberP "3.14foo" `shouldBe` Just (LispNumber 3.14, "foo")
+            parse lispNumberP "-2.5e10xyzfoo" `shouldBe` Just (LispNumber (-2.5e10), "xyzfoo")

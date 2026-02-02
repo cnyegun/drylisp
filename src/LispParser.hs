@@ -9,11 +9,13 @@ module LispParser
     ,   lispBoolP
     ,   lispStringP
     ,   lispNumberP
+    ,   lispExprP
     ) where
 import DryLisp
 import Data.Char
 import Control.Applicative
 import Text.Read
+import Data.Scientific
 
 newtype Parser a = Parser { parse :: String -> Maybe (a, String) }
 
@@ -72,6 +74,9 @@ tok p = p <* ws
 --  LispExpr Parsers:
 -- ===================
 
+lispExprP :: Parser LispExpr
+lispExprP = lispBoolP <|> lispStringP <|> lispNumberP
+
 lispBoolP :: Parser LispExpr
 lispBoolP = trueP <|> falseP
 
@@ -80,6 +85,6 @@ lispStringP = tok $ LispString <$> stringLiteralP
 
 lispNumberP :: Parser LispExpr
 lispNumberP = tok $ Parser $ \text ->
-    case reads text of 
-        ((n, rest):_) -> Just (LispNumber n, rest)
+    case reads text :: [(Double, String)] of 
+        ((n, rest):_) -> Just (LispNumber (fromFloatDigits n), rest)
         _ -> Nothing
