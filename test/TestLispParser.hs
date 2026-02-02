@@ -3,7 +3,6 @@ module TestLispParser (spec) where
 
 import Test.Hspec
 import Test.QuickCheck
-import Control.Exception (evaluate)
 import DryLisp
 import LispParser
 import Data.List
