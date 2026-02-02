@@ -27,21 +27,21 @@ spec = describe "LispParser" $ do
             property $ \s1 s2 -> 
                 not (s1 `isPrefixOf` s2) && s1 /= "" ==> parse (stringP s1) s2 `shouldBe` Nothing
         it "parses when match string" $ do
-            parse (stringP "foo") "foobar2000" `shouldBe` Just ("foo", "bar2000")
+            parse (stringP "foo") "foo    bar2000" `shouldBe` Just ("foo", "bar2000")
         it "parses exact match" $ do
-            parse (stringP "foo") "foo" `shouldBe` Just ("foo", "")
+            parse (stringP "foo") "foo  " `shouldBe` Just ("foo", "")
     describe "stringLiteralP" $ do
         it "fails on empty string" $ do
             parse stringLiteralP "" `shouldBe` Nothing
         it "parses empty string" $ do
-            parse stringLiteralP "\"\"" `shouldBe` Just ("", "")
+            parse stringLiteralP "\"\"   " `shouldBe` Just ("", "")
         it "parses on normal string literal" $ do
-            parse stringLiteralP "\"eminem\" jayz" `shouldBe` Just ("eminem", " jayz")
+            parse stringLiteralP "\"eminem\"    jayz" `shouldBe` Just ("eminem", "jayz")
     describe "boolP" $ do
         it "fails on empty and other not LispBool input" $ do
             parse boolP "" `shouldBe` Nothing
             parse boolP "hihiahah" `shouldBe` Nothing
         it "parses a LISP true expression" $ do
-            parse boolP "true" `shouldBe` Just (LispBool True, "")
+            parse boolP "true  \n((" `shouldBe` Just (LispBool True, "((")
         it "parses a LISP false expression" $ do
-            parse boolP "false" `shouldBe` Just (LispBool True, "")
+            parse boolP "false  \r\t()" `shouldBe` Just (LispBool True, "()")

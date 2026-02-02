@@ -48,16 +48,22 @@ charP c = satisfy (==c)
 
 stringP :: String -> Parser String
 stringP "" = pure ""
-stringP (c:cs) = (:) <$> charP c <*> stringP cs
+stringP (c:cs) = tok $ (:) <$> charP c <*> stringP cs
 
 stringLiteralP :: Parser String
-stringLiteralP = charP '"' *> many (satisfy (/='"')) <* charP '"'
+stringLiteralP = tok $ charP '"' *> many (satisfy (/='"')) <* charP '"'
 
 boolP :: Parser LispExpr
 boolP = trueP <|> falseP
 
 trueP :: Parser LispExpr
-trueP = (\_ -> LispBool True) <$> stringP "true" 
+trueP = tok $ (\_ -> LispBool True) <$> stringP "true" 
 
 falseP :: Parser LispExpr
-falseP = (\_ -> LispBool True) <$> stringP "false" 
+falseP = tok $ (\_ -> LispBool True) <$> stringP "false" 
+
+ws :: Parser String
+ws = many (satisfy isSpace)
+
+tok :: Parser a -> Parser a
+tok p = p <* ws
