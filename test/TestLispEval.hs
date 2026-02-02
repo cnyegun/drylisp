@@ -160,6 +160,70 @@ spec = describe "TestLispEval" $ do
         eval initialEnv (List [Id "cons", LispNumber 4, LispNumber 5]) `shouldBe`
             Left "cons requires the second argument must be a list"
         eval initialEnv (List [Id "cons", LispNumber 3, List [Id "quote", List []]]) 
-            `shouldBe` Right (List [Id "quote", List [LispNumber 3]])
+            `shouldBe` Right (List [LispNumber 3])
         eval initialEnv (List [Id "cons", LispNumber 3, List [Id "quote", List [LispNumber 4]]]) 
-            `shouldBe` Right (List [Id "quote", List [LispNumber 3, LispNumber 4]])
+            `shouldBe` Right (List [LispNumber 3, LispNumber 4])
+
+    it "car -> returns first element" $ do
+        eval initialEnv (List [Id "car", List [Id "quote", List [LispNumber 1, LispNumber 2]]])
+            `shouldBe` Right (LispNumber 1)
+
+    it "car -> errors on empty list" $ do
+        eval initialEnv (List [Id "car", List [Id "quote", List []]])
+            `shouldBe` Left "car requires a non-empty list"
+
+    it "cdr -> returns rest of list" $ do
+        -- cdr returns the actual list, not a quoted expression
+        eval initialEnv (List [Id "cdr", List [Id "quote", List [LispNumber 1, LispNumber 2, LispNumber 3]]])
+            `shouldBe` Right (List [LispNumber 2, LispNumber 3])
+
+    it "car/cdr -> work together with cons" $ do
+        -- (car (cons 1 '(2 3))) => 1
+        eval initialEnv (List [Id "car", List [Id "cons", LispNumber 1, 
+                                List [Id "quote", List [LispNumber 2, LispNumber 3]]]])
+            `shouldBe` Right (LispNumber 1)
+
+    it "car -> returns first element of list" $ do
+        eval initialEnv (List [Id "car", List [Id "quote", List [LispNumber 1, LispNumber 2]]])
+            `shouldBe` Right (LispNumber 1)
+        eval initialEnv (List [Id "car", List [Id "quote", List [LispString "a", LispString "b"]]])
+            `shouldBe` Right (LispString "a")
+
+    it "car -> errors on empty list" $ do
+        eval initialEnv (List [Id "car", List [Id "quote", List []]])
+            `shouldBe` Left "car requires a non-empty list"
+
+    it "car -> errors on non-list" $ do
+        eval initialEnv (List [Id "car", LispNumber 42])
+            `shouldBe` Left "car requires a list"
+        eval initialEnv (List [Id "car", Id "x"])
+            `shouldBe` Left "Unbound variable: x"
+
+    it "cdr -> returns rest of list" $ do
+        eval initialEnv (List [Id "cdr", List [Id "quote", List [LispNumber 1, LispNumber 2, LispNumber 3]]])
+            `shouldBe` Right (List [LispNumber 2, LispNumber 3])
+
+    it "cdr -> returns empty list for single element" $ do
+        -- Returns empty list, not a quoted empty list
+        eval initialEnv (List [Id "cdr", List [Id "quote", List [LispNumber 42]]])
+            `shouldBe` Right (List [])
+
+    it "cdr -> errors on empty list" $ do
+        eval initialEnv (List [Id "cdr", List [Id "quote", List []]])
+            `shouldBe` Left "cdr requires a non-empty list"
+
+    it "car/cdr -> work with cons" $ do
+        -- (car (cons 1 '(2 3))) => 1
+        eval initialEnv (List [Id "car", List [Id "cons", LispNumber 1, 
+                                List [Id "quote", List [LispNumber 2, LispNumber 3]]]])
+            `shouldBe` Right (LispNumber 1)
+        -- (cdr (cons 1 '(2 3))) => '(2 3) which is the list value (2 3)
+        eval initialEnv (List [Id "cdr", List [Id "cons", LispNumber 1, 
+                                List [Id "quote", List [LispNumber 2, LispNumber 3]]]])
+            `shouldBe` Right (List [LispNumber 2, LispNumber 3])
+
+    it "car/cdr -> cadr pattern (car of cdr)" $ do
+        -- (car (cdr '(1 2 3))) => 2
+        eval initialEnv (List [Id "car", List [Id "cdr", 
+                                List [Id "quote", List [LispNumber 1, LispNumber 2, LispNumber 3]]]])
+            `shouldBe` Right (LispNumber 2)

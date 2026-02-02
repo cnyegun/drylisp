@@ -104,8 +104,19 @@ lispMul = LispClosure [] $ \args -> do
 
 lispCons :: LispExpr
 lispCons = LispClosure [] $ \case
-    [x, List xs] -> Right (List [Id "quote", List (x:xs)])
+    [x, List xs] -> Right (List (x:xs))
     _ -> Left "cons requires the second argument must be a list"
+
+lispCar :: LispExpr
+lispCar = LispClosure [] $ \case
+    [List (x:_)] -> Right x
+    [List []]    -> Left "car requires a non-empty list"
+    _ -> Left "car requires a list"
+
+lispCdr :: LispExpr
+lispCdr = LispClosure [] $ \case
+    [List (_:xs)] -> Right (List xs)
+    _ -> Left "cdr requires a non-empty list"
 
 -- $ =============== $
 --     initial env
@@ -116,4 +127,6 @@ initialEnv = [ ("+", lispAdd)
              , ("-", lispSub)
              , ("*", lispMul)
              , ("cons", lispCons)
+             , ("car", lispCar)
+             , ("cdr", lispCdr)
              ]
