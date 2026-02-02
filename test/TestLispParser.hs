@@ -44,7 +44,7 @@ spec = describe "LispParser" $ do
         it "parses a LISP true expression" $ do
             parse lispBoolP "true  \n((" `shouldBe` Just (LispBool True, "((")
         it "parses a LISP false expression" $ do
-            parse lispBoolP "false  \r\t()" `shouldBe` Just (LispBool True, "()")
+            parse lispBoolP "false  \r\t()" `shouldBe` Just (LispBool False, "()")
     describe "lispStringP" $ do
         it "fails on empty input" $ do
             parse lispStringP "" `shouldBe` Nothing
