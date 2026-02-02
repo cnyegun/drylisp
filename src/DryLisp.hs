@@ -10,4 +10,4 @@ data LispExpr
     | LispBool Bool
     | Id Identifier
     | List [LispExpr]
-    deriving (Show)
+    deriving (Show, Eq)

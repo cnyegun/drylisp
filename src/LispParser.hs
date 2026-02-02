@@ -6,7 +6,9 @@ module LispParser
     ,   charP
     ,   stringP
     ,   stringLiteralP
+    ,   boolP
     ) where
+import DryLisp
 import Data.Char
 import Control.Applicative
 
@@ -50,3 +52,12 @@ stringP (c:cs) = (:) <$> charP c <*> stringP cs
 
 stringLiteralP :: Parser String
 stringLiteralP = charP '"' *> many (satisfy (/='"')) <* charP '"'
+
+boolP :: Parser LispExpr
+boolP = trueP <|> falseP
+
+trueP :: Parser LispExpr
+trueP = (\_ -> LispBool True) <$> stringP "true" 
+
+falseP :: Parser LispExpr
+falseP = (\_ -> LispBool True) <$> stringP "false" 
