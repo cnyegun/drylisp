@@ -52,8 +52,7 @@ charP :: Char -> Parser Char
 charP c = satisfy (==c)
 
 stringP :: String -> Parser String
-stringP "" = pure ""
-stringP (c:cs) = tok $ (:) <$> charP c <*> stringP cs
+stringP = tok . traverse charP
 
 stringLiteralP :: Parser String
 stringLiteralP = tok $ charP '"' *> many (satisfy (/='"')) <* charP '"'

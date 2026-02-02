@@ -20,7 +20,7 @@ spec = describe "LispParser" $ do
                 c /= c' ==> parse (charP c) (c':rest) `shouldBe` Nothing
     describe "stringP" $ do
         it "parses when parameter is empty string" $ do
-            property $ \s -> parse (stringP "") s `shouldBe` Just ("", s)
+            property $ parse (stringP "") "  hehe" `shouldBe` Just ("", "hehe")
         it "fails when given empty string" $ do
             property $ \s -> s /= "" ==> parse (stringP s) "" `shouldBe` Nothing
         it "fails when different string" $ do
