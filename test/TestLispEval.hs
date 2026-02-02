@@ -258,3 +258,71 @@ spec = describe "TestLispEval" $ do
 
         eval initialEnv (List [Id "null?", List [Id "quote", List [LispNumber 3]]])
             `shouldBe` Right (LispBool False)
+
+    it "> -> greater than true" $ do
+        eval initialEnv (List [Id ">", LispNumber 5, LispNumber 3])
+            `shouldBe` Right (LispBool True)
+        eval (("x", LispNumber 10) : initialEnv) (List [Id ">", Id "x", LispNumber 5])
+            `shouldBe` Right (LispBool True)
+
+    it "> -> greater than false" $ do
+        eval initialEnv (List [Id ">", LispNumber 2, LispNumber 5])
+            `shouldBe` Right (LispBool False)
+        eval initialEnv (List [Id ">", LispNumber 5, LispNumber 5])
+            `shouldBe` Right (LispBool False)
+
+    it "< -> less than true" $ do
+        eval initialEnv (List [Id "<", LispNumber 3, LispNumber 5])
+            `shouldBe` Right (LispBool True)
+
+    it "< -> less than false" $ do
+        eval initialEnv (List [Id "<", LispNumber 5, LispNumber 3])
+            `shouldBe` Right (LispBool False)
+        eval initialEnv (List [Id "<", LispNumber 5, LispNumber 5])
+            `shouldBe` Right (LispBool False)
+
+    it ">= -> greater than or equal true" $ do
+        eval initialEnv (List [Id ">=", LispNumber 5, LispNumber 3])
+            `shouldBe` Right (LispBool True)
+        eval initialEnv (List [Id ">=", LispNumber 5, LispNumber 5])
+            `shouldBe` Right (LispBool True)
+
+    it ">= -> greater than or equal false" $ do
+        eval initialEnv (List [Id ">=", LispNumber 2, LispNumber 5])
+            `shouldBe` Right (LispBool False)
+
+    it "<= -> less than or equal true" $ do
+        eval initialEnv (List [Id "<=", LispNumber 3, LispNumber 5])
+            `shouldBe` Right (LispBool True)
+        eval initialEnv (List [Id "<=", LispNumber 5, LispNumber 5])
+            `shouldBe` Right (LispBool True)
+
+    it "<= -> less than or equal false" $ do
+        eval initialEnv (List [Id "<=", LispNumber 5, LispNumber 3])
+            `shouldBe` Right (LispBool False)
+
+    it "numeric comparisons -> strict type checking" $ do
+        eval initialEnv (List [Id ">", LispNumber 5, LispString "3"])
+            `shouldBe` Left "> requires exactly 2 numbers"
+        eval initialEnv (List [Id "<", LispString "a", LispNumber 1])
+            `shouldBe` Left "< requires exactly 2 numbers"
+        eval initialEnv (List [Id ">=", LispBool True, LispNumber 0])
+            `shouldBe` Left ">= requires exactly 2 numbers"
+
+    it "numeric comparisons -> wrong arity" $ do
+        eval initialEnv (List [Id ">", LispNumber 5])
+            `shouldBe` Left "> requires exactly 2 numbers"
+        eval initialEnv (List [Id "<", LispNumber 1, LispNumber 2, LispNumber 3])
+            `shouldBe` Left "< requires exactly 2 numbers"
+
+    it "numeric comparisons -> work in if expressions" $ do
+        eval initialEnv (List [Id "if", 
+                    List [Id ">", LispNumber 5, LispNumber 3],
+                    LispNumber 1,
+                    LispNumber 0])
+            `shouldBe` Right (LispNumber 1)
+        eval initialEnv (List [Id "if",
+                    List [Id "<=", LispNumber 2, LispNumber 1],
+                    LispNumber 1,
+                    LispNumber 0])
+            `shouldBe` Right (LispNumber 0)

@@ -132,6 +132,26 @@ lispEmpty = LispClosure [] $ \case
     [List []]     -> Right (LispBool True)
     _             -> Left "Not a list"
 
+lispGt :: LispExpr
+lispGt = LispClosure [] $ \case
+    [LispNumber a, LispNumber b] -> Right (LispBool (a > b))
+    _                            -> Left "> requires exactly 2 numbers"
+
+lispGe :: LispExpr
+lispGe = LispClosure [] $ \case
+    [LispNumber a, LispNumber b] -> Right (LispBool (a >= b))
+    _                            -> Left ">= requires exactly 2 numbers"
+
+lispLt :: LispExpr
+lispLt = LispClosure [] $ \case
+    [LispNumber a, LispNumber b] -> Right (LispBool (a < b))
+    _                            -> Left "< requires exactly 2 numbers"
+
+lispLe :: LispExpr
+lispLe = LispClosure [] $ \case
+    [LispNumber a, LispNumber b] -> Right (LispBool (a <= b))
+    _                            -> Left "<= requires exactly 2 numbers"
+
 -- $ =============== $
 --     initial env
 -- $ =============== $
@@ -146,4 +166,8 @@ initialEnv = [ ("+", lispAdd)
              , ("=", lispEq)
              , ("empty?", lispEmpty)
              , ("null?", lispEmpty)
+             , (">", lispGt)
+             , (">=", lispGe)
+             , ("<", lispLt)
+             , ("<=", lispLe)
              ]
