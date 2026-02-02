@@ -17,7 +17,6 @@ module LispParser
 import DryLisp
 import Data.Char
 import Control.Applicative
-import Data.Scientific
 
 newtype Parser a = Parser { parse :: String -> Maybe (a, String) }
 
@@ -87,7 +86,7 @@ lispStringP = LispString <$> stringLiteralP
 lispNumberP :: Parser LispExpr
 lispNumberP = tok $ Parser $ \text ->
     case reads text :: [(Double, String)] of
-        ((n, rest):_) -> Just (LispNumber (fromFloatDigits n), rest)
+        ((n, rest):_) -> Just (LispNumber n, rest)
         _ -> Nothing
 
 idP :: Parser LispExpr
