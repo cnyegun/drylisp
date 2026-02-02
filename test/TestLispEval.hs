@@ -227,3 +227,21 @@ spec = describe "TestLispEval" $ do
         eval initialEnv (List [Id "car", List [Id "cdr", 
                                 List [Id "quote", List [LispNumber 1, LispNumber 2, LispNumber 3]]]])
             `shouldBe` Right (LispNumber 2)
+
+    it "= -> check for equality case: true" $ do
+        eval (initialEnv ++ [("x", LispString "hi"), ("y", LispString "hi")]) 
+            (List [Id "=", Id "x", Id "y"])
+                `shouldBe` Right (LispBool True)
+
+        eval (initialEnv ++ [("x", LispNumber 5), ("y", LispNumber 5)]) 
+            (List [Id "=", Id "x", LispNumber 5])
+                `shouldBe` Right (LispBool True)
+                
+    it "= -> check for equality case: false" $ do
+        eval (initialEnv ++ [("x", LispString "hi"), ("y", LispString "")]) 
+            (List [Id "=", Id "x", Id "y"])
+                `shouldBe` Right (LispBool False)
+
+        eval (initialEnv ++ [("x", LispNumber 3), ("y", LispString "")]) 
+            (List [Id "=", Id "x", Id "y"])
+                `shouldBe` Left "Wrong type for comparison"

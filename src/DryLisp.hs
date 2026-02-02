@@ -118,6 +118,16 @@ lispCdr = LispClosure [] $ \case
     [List (_:xs)] -> Right (List xs)
     _ -> Left "cdr requires a non-empty list"
 
+-- Let's make it strict (like Scheme and Common Lisp) YEAH!
+lispEq :: LispExpr
+lispEq = LispClosure [] $ \case
+    [LispNumber a, LispNumber b] -> Right (LispBool (a == b))
+    [LispString a, LispString b] -> Right (LispBool (a == b))
+    [LispBool   a, LispBool   b] -> Right (LispBool (a == b))
+    _                            -> Left "Wrong type for comparison" 
+    
+
+
 -- $ =============== $
 --     initial env
 -- $ =============== $
@@ -129,4 +139,5 @@ initialEnv = [ ("+", lispAdd)
              , ("cons", lispCons)
              , ("car", lispCar)
              , ("cdr", lispCdr)
+             , ("=", lispEq)
              ]
