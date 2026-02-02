@@ -56,9 +56,6 @@ stringP (c:cs) = tok $ (:) <$> charP c <*> stringP cs
 stringLiteralP :: Parser String
 stringLiteralP = tok $ charP '"' *> many (satisfy (/='"')) <* charP '"'
 
-lispBoolP :: Parser LispExpr
-lispBoolP = trueP <|> falseP
-
 trueP :: Parser LispExpr
 trueP = tok $ (\_ -> LispBool True) <$> stringP "true"
 
@@ -70,6 +67,13 @@ ws = many (satisfy isSpace)
 
 tok :: Parser a -> Parser a
 tok p = p <* ws
+
+-- ===================
+--  LispExpr Parsers:
+-- ===================
+
+lispBoolP :: Parser LispExpr
+lispBoolP = trueP <|> falseP
 
 lispStringP :: Parser LispExpr
 lispStringP = tok $ LispString <$> stringLiteralP
