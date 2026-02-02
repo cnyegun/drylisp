@@ -60,6 +60,16 @@ eval env (List [Id "if", condExpr, thenExpr, elseExpr]) = do
 
 eval _ (List (Id "if": _)) = Left "if requires exactly 3 arguments"
 
+
+eval env (List [Id "lambda", List params, body]) =
+    Right $ LispClosure env $ \args -> do
+        paramNames <- mapM (\case (Id name) -> Right name; _ -> Left "lambda: failed") params
+        if length paramNames /= length args 
+            then Left "lambda: arity mismatch"
+        else 
+            let newEnv = zip paramNames args ++ env
+            in eval newEnv body
+
 eval env (List (f : args)) = do
     fnClosure <- eval env f
     argsVal <- mapM (eval env) args
@@ -87,6 +97,11 @@ lispSub = LispClosure [] $ \case
     [LispNumber a, LispNumber b] -> Right (LispNumber (a - b))
     _ -> Left "- requires exactly 2 numbers"
 
+lispMul :: LispExpr
+lispMul = LispClosure [] $ \args -> do
+    nums <- mapM (\case LispNumber n -> Right n; _ -> Left "* requires numbers") args
+    Right (LispNumber (product nums))
+
 -- $ =============== $
 --     initial env
 -- $ =============== $
@@ -94,4 +109,5 @@ lispSub = LispClosure [] $ \case
 initialEnv :: Env
 initialEnv = [ ("+", lispAdd)
              , ("-", lispSub)
+             , ("*", lispMul)
              ]

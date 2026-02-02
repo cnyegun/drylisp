@@ -84,3 +84,70 @@ spec = describe "TestLispEval" $ do
         eval initialEnv (List [Id "+", LispNumber 1, 
                             List [Id "+", LispNumber 2, LispNumber 3]])
             `shouldBe` Right (LispNumber 6)
+    
+    it "eval lambda -> creates closure and calls it" $ do
+        let lambdaExpr = List [Id "lambda", List [Id "x"], 
+                            List [Id "+", Id "x", LispNumber 1]]
+        eval initialEnv (List [lambdaExpr, LispNumber 42])
+            `shouldBe` Right (LispNumber 43)
+    
+    it "lambda -> identity function returns argument" $ do
+        let identity = List [Id "lambda", List [Id "x"], Id "x"]
+        eval initialEnv (List [identity, LispNumber 42]) 
+            `shouldBe` Right (LispNumber 42)
+
+    it "lambda -> single parameter arithmetic" $ do
+        let inc = List [Id "lambda", List [Id "x"], 
+                        List [Id "+", Id "x", LispNumber 1]]
+        eval initialEnv (List [inc, LispNumber 5])
+            `shouldBe` Right (LispNumber 6)
+
+    it "lambda -> multiple parameters" $ do
+        let add = List [Id "lambda", List [Id "x", Id "y"], 
+                        List [Id "+", Id "x", Id "y"]]
+        eval initialEnv (List [add, LispNumber 3, LispNumber 4])
+            `shouldBe` Right (LispNumber 7)
+
+    it "lambda -> nested application" $ do
+        let add = List [Id "lambda", List [Id "x", Id "y"], 
+                        List [Id "+", Id "x", Id "y"]]
+        eval initialEnv (List [add, List [add, LispNumber 1, LispNumber 2], LispNumber 3])
+            `shouldBe` Right (LispNumber 6)
+
+    it "lambda -> lexical scope captures outer variables" $ do
+        let closure = List [Id "lambda", List [Id "x"], 
+                            List [Id "+", Id "x", Id "y"]]
+        eval (initialEnv ++ [("y", LispNumber 10)]) (List [closure, LispNumber 5])
+            `shouldBe` Right (LispNumber 15)
+
+    it "lambda -> lexical scope is static, not dynamic" $ do
+        let closure = List [Id "lambda", List [Id "x"], 
+                            List [Id "+", Id "x", Id "y"]]
+        let env = initialEnv ++ [("y", LispNumber 10)]
+        eval env (List [closure, LispNumber 5])
+            `shouldBe` Right (LispNumber 15)
+
+    it "lambda -> arity mismatch too few args" $ do
+        let add = List [Id "lambda", List [Id "x", Id "y"], 
+                        List [Id "+", Id "x", Id "y"]]
+        eval initialEnv (List [add, LispNumber 1])
+            `shouldBe` Left "lambda: arity mismatch"
+
+    it "lambda -> arity mismatch too many args" $ do
+        let identity = List [Id "lambda", List [Id "x"], Id "x"]
+        eval initialEnv (List [identity, LispNumber 1, LispNumber 2])
+            `shouldBe` Left "lambda: arity mismatch"
+
+    it "lambda -> body can be complex expression" $ do
+        let calc = List [Id "lambda", List [Id "a", Id "b"], 
+                        List [Id "+", 
+                            List [Id "*", Id "a", Id "a"], 
+                            List [Id "*", Id "b", Id "b"]]]
+        eval initialEnv (List [calc, LispNumber 3, LispNumber 4])
+            `shouldBe` Right (LispNumber 25)
+
+    it "lambda -> returns closure as value" $ do
+        let lam = List [Id "lambda", List [Id "x"], Id "x"]
+        case eval initialEnv lam of
+            Right (LispClosure _ _) -> True
+            _ -> False
