@@ -64,3 +64,22 @@ spec = describe "LispParser" $ do
         it "parse float" $ do
             parse lispNumberP "3.14foo" `shouldBe` Just (LispNumber 3.14, "foo")
             parse lispNumberP "-2.5e10xyzfoo" `shouldBe` Just (LispNumber (-2.5e10), "xyzfoo")
+    describe "listP" $ do
+        it "fails when given empty input" $ do
+            parse listP "" `shouldBe` Nothing
+        it "parses empty list" $ do
+            parse listP "()" `shouldBe` Just (List [], "")
+        it "parses some normal list" $ do
+            parse listP "( 1  4  5)" `shouldBe` Just (List [LispNumber 1,LispNumber 4,LispNumber 5],"")
+        it "parses nested list" $ do
+            parse listP "(+ 1 4 (* 3 5))" `shouldBe` 
+                Just (List [Id "+", LispNumber 1, LispNumber 4, List [Id "*", LispNumber 3, LispNumber 5]], "")
+    describe "idP" $ do
+        it "fails on empty input" $ do
+            parse idP "" `shouldBe` Nothing
+        it "doesn't parse numbers as identifiers" $ do
+            parse idP "123" `shouldBe` Nothing
+        it "parse +" $ do
+            parse idP "+  " `shouldBe` Just (Id "+", "")
+        it "parse some name" $ do
+            parse idP "string-append \"Hello\" \"World\"" `shouldBe` Just (Id "string-append", "\"Hello\" \"World\"")

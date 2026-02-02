@@ -10,6 +10,8 @@ module LispParser
     ,   lispStringP
     ,   lispNumberP
     ,   lispExprP
+    ,   idP
+    ,   listP
     ) where
 import DryLisp
 import Data.Char
@@ -74,7 +76,7 @@ tok p = p <* ws
 -- ===================
 
 lispExprP :: Parser LispExpr
-lispExprP = lispBoolP <|> lispStringP <|> lispNumberP
+lispExprP = lispBoolP <|> lispStringP <|> lispNumberP <|> idP <|> listP
 
 lispBoolP :: Parser LispExpr
 lispBoolP = trueP <|> falseP
@@ -84,6 +86,20 @@ lispStringP = LispString <$> stringLiteralP
 
 lispNumberP :: Parser LispExpr
 lispNumberP = tok $ Parser $ \text ->
-    case reads text :: [(Double, String)] of 
+    case reads text :: [(Double, String)] of
         ((n, rest):_) -> Just (LispNumber (fromFloatDigits n), rest)
         _ -> Nothing
+
+idP :: Parser LispExpr
+idP = tok $ Id <$> (((:) <$> first) <*> many rest)
+    where
+        first = satisfy (\c -> isAlpha c || c `elem` "+-*/<>=!?_")
+        rest = satisfy (\c -> isAlphaNum c || c `elem` "+-*/<>=!?_")
+
+
+listP :: Parser LispExpr
+listP = Parser $ \text -> do
+    (_, rest) <- parse (tok $ charP '(') text
+    (xs, rest') <- parse (many lispExprP) rest
+    (_, rest'') <- parse (tok $ charP ')') rest'
+    Just (List xs, rest'')
