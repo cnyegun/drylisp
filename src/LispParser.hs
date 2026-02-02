@@ -17,7 +17,6 @@ module LispParser
 import DryLisp
 import Data.Char
 import Control.Applicative
-import Text.Read
 import Data.Scientific
 
 newtype Parser a = Parser { parse :: String -> Maybe (a, String) }
