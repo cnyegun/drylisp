@@ -45,3 +45,11 @@ spec = describe "LispParser" $ do
             parse lispBoolP "true  \n((" `shouldBe` Just (LispBool True, "((")
         it "parses a LISP false expression" $ do
             parse lispBoolP "false  \r\t()" `shouldBe` Just (LispBool True, "()")
+    describe "lispStringP" $ do
+        it "fails on empty input" $ do
+            parse lispStringP "" `shouldBe` Nothing
+        it "parses empty string" $ do
+            parse lispStringP "\"\"  " `shouldBe` Just (LispString "", "")
+        it "parses normal string" $ do
+            property $ \s -> notElem '"' s ==>
+                parse lispStringP ("\"" ++ s ++ "\"") `shouldBe` Just (LispString s, "")

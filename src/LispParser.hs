@@ -70,4 +70,4 @@ tok :: Parser a -> Parser a
 tok p = p <* ws
 
 lispStringP :: Parser LispExpr
-lispStringP = undefined
+lispStringP = tok $ LispString <$> stringLiteralP 
