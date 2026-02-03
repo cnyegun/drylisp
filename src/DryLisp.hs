@@ -1,12 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecursiveDo #-}
 module DryLisp
     (   Identifier
     ,   LispExpr (..)
     ,   eval
     ,   initialEnv
     ) where
-import Control.Monad.Fix
 
 type Identifier = String
 type Env = [(String, LispExpr)]
@@ -87,6 +85,12 @@ eval env (List [Id "let*", List bindings, body]) = do
 eval env (List [Id "letrec", List bindings, body]) = do
     binds <- mapM extractBinding bindings
     lispLetrec env binds body
+
+eval env (List [Id "define", Id name, expr]) = do
+    (_, val) <- eval env expr
+    Right ((name, val) : env, Id name)
+
+eval _ (List [Id "define", _, _]) = Left "define: syntax error"
 
 eval env (List (f : args)) = do
     (_, fnClosure) <- eval env f
