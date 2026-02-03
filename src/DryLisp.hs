@@ -123,7 +123,6 @@ eval env (List (f : args)) = do
     Right (env, result)
 
 -- Fall through
-eval _ (List []) = Left "Empty application"
 eval _ _ = Left "Unknown expression"
 
 extractBinding :: LispExpr -> Either ErrorMsg (Identifier, LispExpr)
