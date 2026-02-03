@@ -273,8 +273,8 @@ lispFilter = LispClosure [] $ \case
 
 lispFold :: LispExpr  -- left fold (reduce)
 lispFold = LispClosure [] $ \case
-    [fn, init, List xs] -> do
-        acc <- foldM (\a x -> apply fn [a, x]) init xs
+    [fn, initial, List xs] -> do
+        acc <- foldM (\a x -> apply fn [a, x]) initial xs
         Right ([], acc)
     _ -> Left "fold requires function, initial value, and list"
 
