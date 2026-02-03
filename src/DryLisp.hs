@@ -87,17 +87,7 @@ eval env (List [Id "letrec", List bindings, body]) = do
     binds <- mapM extractBinding bindings
     lispLetrec env binds body
 
-eval env (List [Id "define", Id name, expr]) = do
-    let names = [name]
-        expressions = [expr]
-        recEnv = zip names vals ++ env
-        vals :: [LispExpr]
-        vals = map (\e -> 
-                       case eval recEnv e of 
-                           Right (_, v) -> v
-                           Left msg -> error msg
-                  ) expressions
-    Right (recEnv, head vals)
+eval env (List [Id "define", Id name, expr]) = undefined
 
 eval _ (List [Id "define", _, _]) = Left "define: syntax error"
 
@@ -213,16 +203,15 @@ lispSeqLet env ((name, expr):rest) body = do
 lispSeqLet env [] body = eval env body
 
 lispLetrec :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
-lispLetrec env bindings body = 
+lispLetrec env bindings body = do
     let (names, expressions) = unzip bindings
         env' = zip names vals ++ env
-        vals = map (\e -> case eval env' e of 
-                Right (_, v) -> v
-                Left msg -> error msg
+        vals = map (\e -> case eval env' e of
+            Right (_, v) -> v
+            Left msg     -> error msg
             ) expressions
-    in do 
-        (_, result) <- eval env' body
-        Right (env, result)
+    (_, result) <- eval env' body
+    Right (env, result)
 
 -- $ =============== $
 --     initial env
