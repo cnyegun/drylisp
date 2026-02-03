@@ -7,7 +7,7 @@ import System.IO (hFlush, stdout)
 
 repl :: Env -> IO ()
 repl env = do
-    putStr "lisp> "
+    putStr "drylisp> "
     hFlush stdout
     input <- getLine
     
