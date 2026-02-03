@@ -17,7 +17,7 @@ data LispExpr
     | List [LispExpr]
     | LispClosure 
             { closureEnv :: Env
-            , closureFn :: [LispExpr] -> Either ErrorMsg LispExpr }
+            , closureFn :: [LispExpr] -> Either ErrorMsg (Env, LispExpr) }
 
 instance Show LispExpr where
     show (LispNumber n) = show n
@@ -35,52 +35,59 @@ instance Eq LispExpr where
     List xs1      == List xs2      = xs1 == xs2
     _ == _ = False 
 
-eval :: Env -> LispExpr -> Either ErrorMsg LispExpr
+eval :: Env -> LispExpr -> Either ErrorMsg (Env, LispExpr)
 
 -- Atomic -> Evalue to itself
-eval _ (LispString s) = Right (LispString s)
-eval _ (LispBool b) = Right (LispBool b)
-eval _ (LispNumber n) = Right (LispNumber n)
+eval env (LispString s) = Right (env, LispString s)
+eval env (LispBool b) = Right (env, LispBool b)
+eval env (LispNumber n) = Right (env, LispNumber n)
 
 -- Id -> Lookup in Env
 eval [] (Id name) = Left ("Unbound variable: " ++ name)
 eval ((key, value):rest) (Id name) = 
-    if name == key then Right value
+    if name == key then Right ((key, value):rest, value)
     else eval rest (Id name)
 
 -- Quote -> Return expression unevaluated
-eval _ (List [Id "quote", rest]) = Right rest
+eval env (List [Id "quote", rest]) = Right (env, rest)
 
 -- If else then
 eval env (List [Id "if", condExpr, thenExpr, elseExpr]) = do
-    condVal <- eval env condExpr
+    (newEnv, condVal) <- eval env condExpr
     case condVal of 
-        LispBool False -> eval env elseExpr
-        _ -> eval env thenExpr
+        LispBool False -> eval newEnv elseExpr
+        _ -> eval newEnv thenExpr
 
 eval _ (List (Id "if": _)) = Left "if requires exactly 3 arguments"
 
-
+-- Lambda -> create a closure and zip the params (string) to the args (LispExpr) 
+--           then append it to the env 
 eval env (List [Id "lambda", List params, body]) =
-    Right $ LispClosure env $ \args -> do
-        paramNames <- mapM (\case (Id name) -> Right name; _ -> Left "lambda: failed") params
+    Right (env, LispClosure env $ \args -> do
+        paramNames <- mapM (\case (Id name) -> Right name; _ -> Left "lambda: invalid parameter") params
         if length paramNames /= length args 
             then Left "lambda: arity mismatch"
         else 
-            let newEnv = zip paramNames args ++ env
-            in eval newEnv body
+            let newEnv =  zip paramNames args ++ env
+            in eval newEnv body)
 
 eval env (List (f : args)) = do
-    fnClosure <- eval env f
-    argsVal <- mapM (eval env) args
-    apply fnClosure argsVal
+    (_, fnClosure) <- eval env f
+    argsValWithEnv <- mapM (eval env) args
+    let argsVal = map snd argsValWithEnv
+    result <- apply fnClosure argsVal
+    Right (env, result)
 
 -- Fall through
 eval _ (List []) = Left "Empty application"
 eval _ _ = Left "Unknown expression"
 
 apply :: LispExpr -> [LispExpr] -> Either ErrorMsg LispExpr
-apply (LispClosure _ fn) args = fn args
+apply (LispClosure _ fn) args = 
+    case fn args of
+        Right (_, val) -> Right val
+        Left msg -> Left msg
+
 apply _ _ = Left "Not a function"
 
 -- $ =============== $
@@ -90,66 +97,66 @@ apply _ _ = Left "Not a function"
 lispAdd :: LispExpr
 lispAdd = LispClosure [] $ \args -> do
     nums <- mapM (\case LispNumber n -> Right n; _ -> Left "+ requires numbers") args
-    Right (LispNumber (sum nums))
+    Right ([], LispNumber (sum nums))
 
 lispSub :: LispExpr
 lispSub = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispNumber (a - b))
+    [LispNumber a, LispNumber b] -> Right ([], LispNumber (a - b))
     _ -> Left "- requires exactly 2 numbers"
 
 lispMul :: LispExpr
 lispMul = LispClosure [] $ \args -> do
     nums <- mapM (\case LispNumber n -> Right n; _ -> Left "* requires numbers") args
-    Right (LispNumber (product nums))
+    Right ([], LispNumber (product nums))
 
 lispCons :: LispExpr
 lispCons = LispClosure [] $ \case
-    [x, List xs] -> Right (List (x:xs))
+    [x, List xs] -> Right ([], List (x:xs))
     _ -> Left "cons requires the second argument must be a list"
 
 lispCar :: LispExpr
 lispCar = LispClosure [] $ \case
-    [List (x:_)] -> Right x
+    [List (x:_)] -> Right ([], x)
     [List []]    -> Left "car requires a non-empty list"
     _ -> Left "car requires a list"
 
 lispCdr :: LispExpr
 lispCdr = LispClosure [] $ \case
-    [List (_:xs)] -> Right (List xs)
+    [List (_:xs)] -> Right ([], List xs)
     _ -> Left "cdr requires a non-empty list"
 
 -- Let's make it strict (like Scheme and Common Lisp) YEAH!
 lispEq :: LispExpr
 lispEq = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispBool (a == b))
-    [LispString a, LispString b] -> Right (LispBool (a == b))
-    [LispBool   a, LispBool   b] -> Right (LispBool (a == b))
+    [LispNumber a, LispNumber b] -> Right ([], LispBool (a == b))
+    [LispString a, LispString b] -> Right ([], LispBool (a == b))
+    [LispBool   a, LispBool   b] -> Right ([], LispBool (a == b))
     _                            -> Left "Wrong type for comparison" 
     
 lispEmpty :: LispExpr
 lispEmpty = LispClosure [] $ \case
-    [List (_:_)] -> Right (LispBool False)
-    [List []]     -> Right (LispBool True)
+    [List (_:_)] -> Right ([], LispBool False)
+    [List []]     -> Right ([], LispBool True)
     _             -> Left "Not a list"
 
 lispGt :: LispExpr
 lispGt = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispBool (a > b))
+    [LispNumber a, LispNumber b] -> Right ([], LispBool (a > b))
     _                            -> Left "> requires exactly 2 numbers"
 
 lispGe :: LispExpr
 lispGe = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispBool (a >= b))
+    [LispNumber a, LispNumber b] -> Right ([], LispBool (a >= b))
     _                            -> Left ">= requires exactly 2 numbers"
 
 lispLt :: LispExpr
 lispLt = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispBool (a < b))
+    [LispNumber a, LispNumber b] -> Right ([], LispBool (a < b))
     _                            -> Left "< requires exactly 2 numbers"
 
 lispLe :: LispExpr
 lispLe = LispClosure [] $ \case
-    [LispNumber a, LispNumber b] -> Right (LispBool (a <= b))
+    [LispNumber a, LispNumber b] -> Right ([], LispBool (a <= b))
     _                            -> Left "<= requires exactly 2 numbers"
 
 -- $ =============== $
