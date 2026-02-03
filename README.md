@@ -2,19 +2,27 @@
 
 A small Lisp interpreter written in Haskell. This was a learning project to understand how parser and interpreters work.
 
+![repl img](screenshot.png)
+
 ## What It Does
 
 DryLisp can evaluate basic Lisp expressions including:
 
-- **Literals**: numbers, strings, booleans (`true`/`false`)
-- **Variables**: looked up in an environment
-- **Conditionals**: `if` expressions
-- **Lambdas**: anonymous functions with closures
-- **Quoting**: prevent evaluation with `quote` or `'`
-- **Basic primitives**: `+`, `-`, `*`, `cons`, `car`, `cdr`
+- **`(1)`** Atomic expression like numbers, strings, and true/false
+- **`(2)`** Variables (identifier)
+- **`(3)`** If statements
+- **`(4)`** Lambda functions with closures
+- **`(5)`** Let, let*, and letrec for create a local environment
+- **`(6)`** Define for naming stuff
+- **`(7)`** Some build in functions like +, -, *, cons, car, cdr
+- **`(8)`** Higher-order functions: map, filter, fold, length, append, reverse
 
 ## Example Usage
 
+### 1. Use the REPL
+`cabal run`
+
+### 2. If you want to use it as a module: 
 ```haskell
 import DryLisp
 import LispParser
@@ -26,35 +34,18 @@ main = do
         Just (expr, _) -> print $ eval initialEnv expr
         Nothing        -> putStrLn "Parse error"
 ```
+### Closure
 
-## The Eval Function
-
-The `eval` function pattern-matches on expression types:
-
-- **Atoms** (strings, numbers, booleans) evaluate to themselves
-- **Identifiers** are looked up in the environment
-- **Lists** are treated as function applications, special forms, or macros
-
-Closures capture their defining environment, so this works as expected:
-
-```lisp
-((lambda (x)
-    (lambda (y) 
-        (+ x y))) 
-  5)
+Closures capture their environment.
+```haskell
+LispClosure
+    { closureEnv :: Env
+    , closureFn :: [LispExpr] -> Either ErrorMsg (Env, LispExpr) }
 ```
 
 ## The Parser
 
-The parser is built from scratch using applicative functor combinators. No external parsing libraries it just `Functor`, `Applicative`, and `Alternative`.
-
-It handles:
-- Numbers
-- Strings
-- Booleans
-- Identifiers (names)
-- Lists
-- Quoting
+The parser is built from scratch using applicative functor combinators.
 
 ## License
 
