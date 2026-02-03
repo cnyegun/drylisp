@@ -326,3 +326,65 @@ spec = describe "TestLispEval" $ do
                     LispNumber 1,
                     LispNumber 0])
             `shouldBe` Right (initialEnv, LispNumber 0)
+    
+    it "let -> single binding" $ do
+        eval initialEnv (List [Id "let", List [List [Id "x", LispNumber 5]], Id "x"])
+            `shouldBe` Right (initialEnv, LispNumber 5)
+
+    it "let -> multiple bindings (parallel)" $ do
+        -- (let ([x 1] [y 2]) (+ x y)) => 3
+        eval initialEnv (List [Id "let", 
+            List [List [Id "x", LispNumber 1], List [Id "y", LispNumber 2]],
+            List [Id "+", Id "x", Id "y"]])
+            `shouldBe` Right (initialEnv, LispNumber 3)
+
+    it "let -> bindings don't see each other (parallel scoping)" $ do
+        -- (let ([x 1] [y (+ x 1)]) y) should fail - x not visible in y's init
+        eval initialEnv (List [Id "let",
+            List [List [Id "x", LispNumber 1], List [Id "y", List [Id "+", Id "x", LispNumber 1]]],
+            Id "y"])
+            `shouldBe` Left "Unbound variable: x"
+
+    it "let -> body sees all bindings" $ do
+        eval initialEnv (List [Id "let",
+            List [List [Id "a", LispNumber 10], List [Id "b", LispNumber 20]],
+            List [Id "+", Id "a", Id "b"]])
+            `shouldBe` Right (initialEnv, LispNumber 30)
+
+    it "let -> shadows outer scope" $ do
+        -- (let ([x 100]) x) inside env where x=42
+        eval [("x", LispNumber 42)] (List [Id "let",
+            List [List [Id "x", LispNumber 100]],
+            Id "x"])
+            `shouldBe` Right ([("x", LispNumber 42)], LispNumber 100)
+
+    it "let -> outer scope unchanged after let" $ do
+        -- (let ([x 999]) x) returns 999, but env still has original x
+        eval [("x", LispNumber 1)] (List [Id "let",
+            List [List [Id "x", LispNumber 999]],
+            Id "x"])
+            `shouldBe` Right ([("x", LispNumber 1)], LispNumber 999)
+
+    it "let -> empty binding list" $ do
+        eval initialEnv (List [Id "let", List [], LispNumber 42])
+            `shouldBe` Right (initialEnv, LispNumber 42)
+
+    it "let -> complex expressions in bindings" $ do
+        -- (let ([x (+ 1 2)] [y (* 3 4)]) (+ x y))
+        eval initialEnv (List [Id "let",
+            List [List [Id "x", List [Id "+", LispNumber 1, LispNumber 2]],
+                  List [Id "y", List [Id "*", LispNumber 3, LispNumber 4]]],
+            List [Id "+", Id "x", Id "y"]])
+            `shouldBe` Right (initialEnv, LispNumber 15)
+
+    it "let -> error on malformed binding (not a list)" $ do
+        eval initialEnv (List [Id "let", List [LispNumber 42], LispNumber 1])
+            `shouldBe` Left "Invalid let binding syntax"
+
+    it "let -> error on malformed binding (wrong length)" $ do
+        eval initialEnv (List [Id "let", List [List [Id "x"]], Id "x"])
+            `shouldBe` Left "Invalid let binding syntax"
+
+    it "let -> error on unbound variable in body" $ do
+        eval initialEnv (List [Id "let", List [List [Id "x", LispNumber 1]], Id "y"])
+            `shouldBe` Left "Unbound variable: y"

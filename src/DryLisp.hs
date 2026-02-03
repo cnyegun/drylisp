@@ -72,6 +72,10 @@ eval env (List [Id "lambda", List params, body]) =
             let newEnv =  zip paramNames args ++ env
             in eval newEnv body)
 
+eval env (List [Id "let", List bindings, body]) = do
+    binds <- mapM extractBinding bindings
+    lispLet env binds body
+
 eval env (List (f : args)) = do
     (_, fnClosure) <- eval env f
     argsValWithEnv <- mapM (eval env) args
@@ -82,6 +86,10 @@ eval env (List (f : args)) = do
 -- Fall through
 eval _ (List []) = Left "Empty application"
 eval _ _ = Left "Unknown expression"
+
+extractBinding :: LispExpr -> Either ErrorMsg (Identifier, LispExpr)
+extractBinding (List [Id name, expr]) = Right (name, expr)
+extractBinding _ = Left "Invalid let binding syntax"
 
 apply :: LispExpr -> [LispExpr] -> Either ErrorMsg LispExpr
 apply (LispClosure _ fn) args = 
@@ -159,6 +167,18 @@ lispLe :: LispExpr
 lispLe = LispClosure [] $ \case
     [LispNumber a, LispNumber b] -> Right ([], LispBool (a <= b))
     _                            -> Left "<= requires exactly 2 numbers"
+
+lispLet :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
+lispLet env bindings body = do 
+    -- Extract the bindings tuples
+    -- Evaluate each binding's LispExpr
+    -- Zip it again :D
+    let (names, exprs) = unzip bindings
+    exprValWithEnv <- mapM (eval env) exprs
+    let exprVal = map snd exprValWithEnv
+    let newEnv = zip names exprVal ++ env
+    (_, result) <- eval newEnv body
+    eval env result
 
 -- $ =============== $
 --     initial env
