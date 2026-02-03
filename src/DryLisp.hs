@@ -33,7 +33,8 @@ instance Eq LispExpr where
     LispBool b1   == LispBool b2   = b1 == b2
     Id i1         == Id i2         = i1 == i2
     List xs1      == List xs2      = xs1 == xs2
-    _ == _ = False 
+    LispClosure x_env _ == LispClosure y_env _ = x_env == y_env
+    _ == _ = False
 
 eval :: Env -> LispExpr -> Either ErrorMsg (Env, LispExpr)
 
