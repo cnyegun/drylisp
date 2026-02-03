@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module DryLisp
     (   Identifier
+    ,   Env
     ,   LispExpr (..)
     ,   eval
     ,   initialEnv
@@ -87,8 +88,16 @@ eval env (List [Id "letrec", List bindings, body]) = do
     lispLetrec env binds body
 
 eval env (List [Id "define", Id name, expr]) = do
-    (_, val) <- eval env expr
-    Right ((name, val) : env, Id name)
+    let names = [name]
+        expressions = [expr]
+        recEnv = zip names vals ++ env
+        vals :: [LispExpr]
+        vals = map (\e -> 
+                       case eval recEnv e of 
+                           Right (_, v) -> v
+                           Left msg -> error msg
+                  ) expressions
+    Right (recEnv, head vals)
 
 eval _ (List [Id "define", _, _]) = Left "define: syntax error"
 
