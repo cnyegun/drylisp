@@ -588,3 +588,45 @@ spec = describe "TestLispEval" $ do
                 (_, val) <- eval env1 (List [Id "fact", LispNumber 5])
                 return val
         result `shouldBe` Right (LispNumber 120)
+
+    describe "Higher-order primitives" $ do
+        it "map applies function to each element" $ do
+            let mkList = foldr (\x acc -> List [Id "cons", x, acc]) (List [])
+            let lst = mkList [LispNumber 1, LispNumber 2, LispNumber 3]
+            let lam = List [Id "lambda", List [Id "x"], List [Id "*", Id "x", Id "x"]]
+            case eval initialEnv (List [Id "map", lam, lst]) of
+                Left err -> expectationFailure err
+                Right (_, List xs) -> xs `shouldBe` map LispNumber [1, 4, 9]
+                Right (_, v) -> expectationFailure $ "Expected list, got " ++ show v
+
+        it "filter keeps matching elements" $ do
+            let lst = List [Id "cons", LispNumber 1, List [Id "cons", LispNumber 5, List [Id "cons", LispNumber 2, List []]]]
+            let lam = List [Id "lambda", List [Id "x"], List [Id ">", Id "x", LispNumber 2]]
+            case eval initialEnv (List [Id "filter", lam, lst]) of
+                Left err -> expectationFailure err
+                Right (_, List xs) -> length xs `shouldBe` 1
+                Right _ -> expectationFailure "Expected list"
+
+        it "fold sums correctly" $ do
+            let lst = List [Id "cons", LispNumber 10, List [Id "cons", LispNumber 20, List []]]
+            eval initialEnv (List [Id "fold", Id "+", LispNumber 0, lst])
+                `shouldBe` Right (initialEnv, LispNumber 30)
+
+        it "length counts elements" $ do
+            let lst = List [Id "cons", LispNumber 1, List [Id "cons", LispNumber 2, List [Id "cons", LispNumber 3, List []]]]
+            eval initialEnv (List [Id "length", lst]) `shouldBe` Right (initialEnv, LispNumber 3)
+
+        it "append concatenates multiple lists" $ do
+            let l1 = List [Id "cons", LispNumber 1, List []]
+            let l2 = List [Id "cons", LispNumber 2, List [Id "cons", LispNumber 3, List []]]
+            case eval initialEnv (List [Id "append", l1, l2]) of
+                Right (_, List xs) -> xs `shouldBe` map LispNumber [1, 2, 3]
+                Left err -> expectationFailure err
+                Right _ -> expectationFailure "Expected list"
+
+        it "reverse reverses order" $ do
+            let lst = List [Id "cons", LispNumber 1, List [Id "cons", LispNumber 2, List []]]
+            case eval initialEnv (List [Id "reverse", lst]) of
+                Right (_, List xs) -> xs `shouldBe` map LispNumber [2, 1]
+                Left err -> expectationFailure err
+                Right _ -> expectationFailure "Expected list"

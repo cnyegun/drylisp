@@ -6,6 +6,7 @@ module DryLisp
     ,   eval
     ,   initialEnv
     ) where
+import Control.Monad
 
 type Identifier = String
 type Env = [(String, LispExpr)]
@@ -43,6 +44,7 @@ eval :: Env -> LispExpr -> Either ErrorMsg (Env, LispExpr)
 eval env (LispString s) = Right (env, LispString s)
 eval env (LispBool b) = Right (env, LispBool b)
 eval env (LispNumber n) = Right (env, LispNumber n)
+eval env (List []) = Right (env, List [])
 
 -- Id -> Lookup in Env
 eval [] (Id name) = Left ("Unbound variable: " ++ name)
@@ -240,17 +242,54 @@ lispLetrec env bindings body = do
 -- $ =============== $
 
 initialEnv :: Env
-initialEnv = [ ("+", lispAdd)
-             , ("-", lispSub)
-             , ("*", lispMul)
-             , ("cons", lispCons)
-             , ("car", lispCar)
-             , ("cdr", lispCdr)
-             , ("=", lispEq)
-             , ("empty?", lispEmpty)
-             , ("null?", lispEmpty)
-             , (">", lispGt)
-             , (">=", lispGe)
-             , ("<", lispLt)
-             , ("<=", lispLe)
+initialEnv = [ ("+", lispAdd), ("-", lispSub), ("*", lispMul)
+             , ("cons", lispCons), ("car", lispCar), ("cdr", lispCdr)
+             , ("=", lispEq), ("empty?", lispEmpty), ("null?", lispEmpty)
+             , (">", lispGt), (">=", lispGe), ("<", lispLt), ("<=", lispLe)
+             , ("map", lispMap), ("filter", lispFilter), ("fold", lispFold)
+             , ("length", lispLength), ("append", lispAppend), ("reverse", lispReverse)
              ]
+
+-- $ =============== $
+--     higher order
+-- $ =============== $
+
+lispMap :: LispExpr
+lispMap = LispClosure [] $ \case
+    [fn, List xs] -> do
+        ys <- mapM (apply fn . pure) xs
+        Right ([], List ys)
+    _ -> Left "map requires a function and a list"
+
+lispFilter :: LispExpr
+lispFilter = LispClosure [] $ \case
+    [fn, List xs] -> do
+        ys <- filterM (\x -> do
+            res <- apply fn [x]
+            case res of
+                LispBool False -> return False
+                _              -> return True) xs
+        Right ([], List ys)
+    _ -> Left "filter requires a function and a list"
+
+lispFold :: LispExpr  -- left fold (reduce)
+lispFold = LispClosure [] $ \case
+    [fn, init, List xs] -> do
+        acc <- foldM (\a x -> apply fn [a, x]) init xs
+        Right ([], acc)
+    _ -> Left "fold requires function, initial value, and list"
+
+lispLength :: LispExpr
+lispLength = LispClosure [] $ \case
+    [List xs] -> Right ([], LispNumber (fromIntegral $ length xs))
+    _         -> Left "length requires a list"
+
+lispAppend :: LispExpr
+lispAppend = LispClosure [] $ \args -> do
+    lists <- mapM (\case List xs -> Right xs; _ -> Left "append requires lists") args
+    Right ([], List $ concat lists)
+
+lispReverse :: LispExpr
+lispReverse = LispClosure [] $ \case
+    [List xs] -> Right ([], List $ reverse xs)
+    _         -> Left "reverse requires a list"
