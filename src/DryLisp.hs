@@ -76,6 +76,11 @@ eval env (List [Id "let", List bindings, body]) = do
     binds <- mapM extractBinding bindings
     lispLet env binds body
 
+-- sequential let
+eval env (List [Id "let*", List bindings, body]) = do
+    binds <- mapM extractBinding bindings
+    lispSeqLet env binds body
+
 eval env (List (f : args)) = do
     (_, fnClosure) <- eval env f
     argsValWithEnv <- mapM (eval env) args
@@ -179,6 +184,14 @@ lispLet env bindings body = do
     let newEnv = zip names exprVal ++ env
     (_, result) <- eval newEnv body
     eval env result
+
+lispSeqLet :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
+lispSeqLet env ((name, expr):rest) body = do
+    (_, val) <- eval env expr
+    (_, result) <- lispSeqLet ((name, val):env) rest body
+    Right (env, result)
+    
+lispSeqLet env [] body = eval env body
 
 -- $ =============== $
 --     initial env

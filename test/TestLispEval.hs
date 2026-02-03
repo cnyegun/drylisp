@@ -388,3 +388,80 @@ spec = describe "TestLispEval" $ do
     it "let -> error on unbound variable in body" $ do
         eval initialEnv (List [Id "let", List [List [Id "x", LispNumber 1]], Id "y"])
             `shouldBe` Left "Unbound variable: y"
+
+    it "let* -> sequential bindings see previous" $ do
+        -- (let* ([x 1] [y (+ x 1)]) y) => 2
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", LispNumber 1], 
+                  List [Id "y", List [Id "+", Id "x", LispNumber 1]]],
+            Id "y"])
+            `shouldBe` Right (initialEnv, LispNumber 2)
+
+    it "let* -> multiple sequential dependencies" $ do
+        -- (let* ([x 1] [y (+ x 1)] [z (+ x y)]) z) => 3
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", LispNumber 1],
+                  List [Id "y", List [Id "+", Id "x", LispNumber 1]],
+                  List [Id "z", List [Id "+", Id "x", Id "y"]]],
+            Id "z"])
+            `shouldBe` Right (initialEnv, LispNumber 3)
+
+    it "let* -> later bindings shadow earlier in same let*" $ do
+        -- (let* ([x 1] [x (+ x 1)]) x) => 2
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", LispNumber 1],
+                  List [Id "x", List [Id "+", Id "x", LispNumber 1]]],
+            Id "x"])
+            `shouldBe` Right (initialEnv, LispNumber 2)
+
+    it "let* -> sees outer scope before shadowing" $ do
+        eval (("x", LispNumber 10) : initialEnv) (List [Id "let*",
+            List [List [Id "x", List [Id "+", Id "x", LispNumber 1]]],
+            Id "x"])
+            `shouldBe` Right ((("x", LispNumber 10) : initialEnv), LispNumber 11)
+
+    it "let* -> single binding works same as let" $ do
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", LispNumber 5]],
+            Id "x"])
+            `shouldBe` Right (initialEnv, LispNumber 5)
+
+    it "let* -> empty binding list" $ do
+        eval initialEnv (List [Id "let*", List [], LispNumber 42])
+            `shouldBe` Right (initialEnv, LispNumber 42)
+
+    it "let* -> cannot reference later binding" $ do
+        -- (let* ([x y] [y 1]) x) => error
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", Id "y"],
+                  List [Id "y", LispNumber 1]],
+            Id "x"])
+            `shouldBe` Left "Unbound variable: y"
+
+    it "let* -> lambda in early binding sees outer scope not later bindings" $ do
+        eval (("x", LispNumber 100) : initialEnv) (List [Id "let*",
+            List [List [Id "f", List [Id "lambda", List [Id "n"], 
+                                    List [Id "+", Id "x", Id "n"]]],
+                List [Id "x", LispNumber 10]],
+            List [Id "f", LispNumber 5]])
+            `shouldBe` Right ((("x", LispNumber 100) : initialEnv), LispNumber 105)
+
+    it "let* -> outer scope unchanged after let*" $ do
+        eval [("a", LispNumber 1)] (List [Id "let*",
+            List [List [Id "a", LispNumber 999],
+                  List [Id "b", Id "a"]],
+            Id "b"])
+            `shouldBe` Right ([("a", LispNumber 1)], LispNumber 999)
+
+    it "let* -> complex nested arithmetic" $ do
+        -- (let* ([x 5] [y (* x 2)] [z (+ x y)]) z) => 15
+        eval initialEnv (List [Id "let*",
+            List [List [Id "x", LispNumber 5],
+                  List [Id "y", List [Id "*", Id "x", LispNumber 2]],
+                  List [Id "z", List [Id "+", Id "x", Id "y"]]],
+            Id "z"])
+            `shouldBe` Right (initialEnv, LispNumber 15)
+
+    it "let* -> error on malformed binding" $ do
+        eval initialEnv (List [Id "let*", List [LispNumber 42], LispNumber 1])
+            `shouldBe` Left "Invalid let binding syntax"
