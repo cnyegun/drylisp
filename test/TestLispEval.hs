@@ -465,3 +465,68 @@ spec = describe "TestLispEval" $ do
     it "let* -> error on malformed binding" $ do
         eval initialEnv (List [Id "let*", List [LispNumber 42], LispNumber 1])
             `shouldBe` Left "Invalid let binding syntax"
+
+    it "letrec -> single recursive function (factorial)" $ do
+        -- (letrec ([fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))]) (fact 5)) => 120
+        eval initialEnv (List [Id "letrec",
+            List [List [Id "fact", List [Id "lambda", List [Id "n"],
+                List [Id "if", List [Id "=", Id "n", LispNumber 0],
+                    LispNumber 1,
+                    List [Id "*", Id "n", 
+                        List [Id "fact", List [Id "-", Id "n", LispNumber 1]]]]]]],
+            List [Id "fact", LispNumber 5]])
+            `shouldBe` Right (initialEnv, LispNumber 120)
+
+    it "letrec -> mutually recursive even?/odd?" $ do
+        -- (letrec ([even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))]
+        --          [odd?  (lambda (n) (if (= n 0) #f (even? (- n 1))))])
+        --   (even? 4))
+        eval initialEnv (List [Id "letrec",
+            List [List [Id "even?", List [Id "lambda", List [Id "n"],
+                            List [Id "if", List [Id "=", Id "n", LispNumber 0],
+                                LispBool True,
+                                List [Id "odd?", List [Id "-", Id "n", LispNumber 1]]]]],
+                  List [Id "odd?", List [Id "lambda", List [Id "n"],
+                            List [Id "if", List [Id "=", Id "n", LispNumber 0],
+                                LispBool False,
+                                List [Id "even?", List [Id "-", Id "n", LispNumber 1]]]]]],
+            List [Id "even?", LispNumber 4]])
+            `shouldBe` Right (initialEnv, LispBool True)
+
+    it "letrec -> mutual recursion with different arities" $ do
+        -- (letrec ([inc (lambda (x) (+ x 1))]
+        --           [dec (lambda (x) (- x 1))])
+        --   (dec (inc 5)))
+        eval initialEnv (List [Id "letrec",
+            List [List [Id "inc", List [Id "lambda", List [Id "x"],
+                        List [Id "+", Id "x", LispNumber 1]]],
+                  List [Id "dec", List [Id "lambda", List [Id "x"],
+                        List [Id "-", Id "x", LispNumber 1]]]],
+            List [Id "dec", List [Id "inc", LispNumber 5]]])
+            `shouldBe` Right (initialEnv, LispNumber 5)
+
+    it "letrec -> recursive function captures outer scope" $ do
+        -- letrec can see outer variables too
+        -- (let ([scale 2]) 
+        --   (letrec ([f (lambda (n) (if (= n 0) 0 (+ scale (f (- n 1)))))])
+        --     (f 3))) => 6 (2+2+2)
+        eval (("scale", LispNumber 2) : initialEnv) (List [Id "letrec",
+            List [List [Id "f", List [Id "lambda", List [Id "n"],
+                List [Id "if", List [Id "=", Id "n", LispNumber 0],
+                    LispNumber 0,
+                    List [Id "+", Id "scale",
+                        List [Id "f", List [Id "-", Id "n", LispNumber 1]]]]]]],
+            List [Id "f", LispNumber 3]])
+            `shouldBe` Right ((("scale", LispNumber 2) : initialEnv), LispNumber 6)
+
+    it "letrec -> empty binding list" $ do
+        eval initialEnv (List [Id "letrec", List [], LispNumber 42])
+            `shouldBe` Right (initialEnv, LispNumber 42)
+
+    it "letrec -> body can use all bindings" $ do
+        -- (letrec ([x 1] [y 2]) (+ x y))
+        eval initialEnv (List [Id "letrec",
+            List [List [Id "x", LispNumber 1],
+                  List [Id "y", LispNumber 2]],
+            List [Id "+", Id "x", Id "y"]])
+            `shouldBe` Right (initialEnv, LispNumber 3)

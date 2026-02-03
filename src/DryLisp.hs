@@ -1,10 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
-module DryLisp 
+{-# LANGUAGE RecursiveDo #-}
+module DryLisp
     (   Identifier
     ,   LispExpr (..)
-    ,   eval       
+    ,   eval
     ,   initialEnv
     ) where
+import Control.Monad.Fix
 
 type Identifier = String
 type Env = [(String, LispExpr)]
@@ -15,7 +17,7 @@ data LispExpr
     | LispBool Bool
     | Id Identifier
     | List [LispExpr]
-    | LispClosure 
+    | LispClosure
             { closureEnv :: Env
             , closureFn :: [LispExpr] -> Either ErrorMsg (Env, LispExpr) }
 
@@ -45,7 +47,7 @@ eval env (LispNumber n) = Right (env, LispNumber n)
 
 -- Id -> Lookup in Env
 eval [] (Id name) = Left ("Unbound variable: " ++ name)
-eval ((key, value):rest) (Id name) = 
+eval ((key, value):rest) (Id name) =
     if name == key then Right ((key, value):rest, value)
     else eval rest (Id name)
 
@@ -55,7 +57,7 @@ eval env (List [Id "quote", rest]) = Right (env, rest)
 -- If else then
 eval env (List [Id "if", condExpr, thenExpr, elseExpr]) = do
     (newEnv, condVal) <- eval env condExpr
-    case condVal of 
+    case condVal of
         LispBool False -> eval newEnv elseExpr
         _ -> eval newEnv thenExpr
 
@@ -66,9 +68,9 @@ eval _ (List (Id "if": _)) = Left "if requires exactly 3 arguments"
 eval env (List [Id "lambda", List params, body]) =
     Right (env, LispClosure env $ \args -> do
         paramNames <- mapM (\case (Id name) -> Right name; _ -> Left "lambda: invalid parameter") params
-        if length paramNames /= length args 
+        if length paramNames /= length args
             then Left "lambda: arity mismatch"
-        else 
+        else
             let newEnv =  zip paramNames args ++ env
             in eval newEnv body)
 
@@ -80,6 +82,11 @@ eval env (List [Id "let", List bindings, body]) = do
 eval env (List [Id "let*", List bindings, body]) = do
     binds <- mapM extractBinding bindings
     lispSeqLet env binds body
+
+-- recursive let
+eval env (List [Id "letrec", List bindings, body]) = do
+    binds <- mapM extractBinding bindings
+    lispLetrec env binds body
 
 eval env (List (f : args)) = do
     (_, fnClosure) <- eval env f
@@ -97,7 +104,7 @@ extractBinding (List [Id name, expr]) = Right (name, expr)
 extractBinding _ = Left "Invalid let binding syntax"
 
 apply :: LispExpr -> [LispExpr] -> Either ErrorMsg LispExpr
-apply (LispClosure _ fn) args = 
+apply (LispClosure _ fn) args =
     case fn args of
         Right (_, val) -> Right val
         Left msg -> Left msg
@@ -145,8 +152,8 @@ lispEq = LispClosure [] $ \case
     [LispNumber a, LispNumber b] -> Right ([], LispBool (a == b))
     [LispString a, LispString b] -> Right ([], LispBool (a == b))
     [LispBool   a, LispBool   b] -> Right ([], LispBool (a == b))
-    _                            -> Left "Wrong type for comparison" 
-    
+    _                            -> Left "Wrong type for comparison"
+
 lispEmpty :: LispExpr
 lispEmpty = LispClosure [] $ \case
     [List (_:_)] -> Right ([], LispBool False)
@@ -174,7 +181,7 @@ lispLe = LispClosure [] $ \case
     _                            -> Left "<= requires exactly 2 numbers"
 
 lispLet :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
-lispLet env bindings body = do 
+lispLet env bindings body = do
     -- Extract the bindings tuples
     -- Evaluate each binding's LispExpr
     -- Zip it again :D
@@ -183,15 +190,26 @@ lispLet env bindings body = do
     let exprVal = map snd exprValWithEnv
     let newEnv = zip names exprVal ++ env
     (_, result) <- eval newEnv body
-    eval env result
+    Right (env, result)
 
 lispSeqLet :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
 lispSeqLet env ((name, expr):rest) body = do
     (_, val) <- eval env expr
     (_, result) <- lispSeqLet ((name, val):env) rest body
     Right (env, result)
-    
 lispSeqLet env [] body = eval env body
+
+lispLetrec :: Env -> [(Identifier, LispExpr)] -> LispExpr -> Either ErrorMsg (Env, LispExpr)
+lispLetrec env bindings body = 
+    let (names, expressions) = unzip bindings
+        env' = zip names vals ++ env
+        vals = map (\e -> case eval env' e of 
+                Right (_, v) -> v
+                Left msg -> error msg
+            ) expressions
+    in do 
+        (_, result) <- eval env' body
+        Right (env, result)
 
 -- $ =============== $
 --     initial env
