@@ -87,9 +87,31 @@ eval env (List [Id "letrec", List bindings, body]) = do
     binds <- mapM extractBinding bindings
     lispLetrec env binds body
 
-eval env (List [Id "define", Id name, expr]) = undefined
+eval env (List [Id "define", Id name, body]) = 
+    let names = [name]
+        env' = zip names vals ++ env
+        exprs = [body]
+        vals = map (\e -> case eval env' e of
+            Right (_, v) -> v
+            Left msg -> error msg
+            ) exprs
+    in do
+        Right (env', Id name)
+
+eval env (List (Id "define" : List (Id name : params) : body)) = 
+    let body' = case body of 
+            [single] -> single
+            multiple -> List (Id "begin": multiple)
+    in eval env (List [Id "define", Id name, List [Id "lambda", List params, body']])
 
 eval _ (List [Id "define", _, _]) = Left "define: syntax error"
+
+eval env (List (Id "begin": body)) = 
+    case body of 
+        [] -> Left "begin: empty sequence"
+        _ -> do 
+            results <- mapM (eval env) body
+            return (env, snd $ last results)
 
 eval env (List (f : args)) = do
     (_, fnClosure) <- eval env f

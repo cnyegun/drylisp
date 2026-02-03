@@ -4,6 +4,7 @@ module TestLispEval (spec) where
 import Test.Hspec
 import Test.QuickCheck
 import DryLisp
+import Data.Either
 
 spec :: Spec
 spec = describe "TestLispEval" $ do
@@ -531,3 +532,59 @@ spec = describe "TestLispEval" $ do
             List [Id "+", Id "x", Id "y"]])
             `shouldBe` Right (initialEnv, LispNumber 3)
     
+    it "define -> binds a variable to a value" $ do
+        let result = do
+                (env1, _) <- eval initialEnv (List [Id "define", Id "x", LispNumber 42])
+                (_, val) <- eval env1 (Id "x")
+                return val
+        result `shouldBe` Right (LispNumber 42)
+
+    it "define -> evaluates the value expression" $ do
+        let result = do
+                (env1, _) <- eval initialEnv 
+                    (List [Id "define", Id "y", List [Id "*", LispNumber 6, LispNumber 7]])
+                (_, val) <- eval env1 (Id "y")
+                return val
+        result `shouldBe` Right (LispNumber 42)
+
+    it "define -> supports function syntax sugar" $ do
+        let result = do
+                (env1, _) <- eval initialEnv $ List [Id "define", 
+                    List [Id "square", Id "n"], 
+                    List [Id "*", Id "n", Id "n"]]
+                eval env1 (List [Id "square", LispNumber 8])
+        fmap snd result `shouldBe` Right (LispNumber 64)
+
+    it "define -> allows sequential definitions" $ do
+        let result = do
+                (env1, _) <- eval initialEnv (List [Id "define", Id "a", LispNumber 1])
+                (env2, _) <- eval env1 (List [Id "define", Id "b", List [Id "+", Id "a", LispNumber 1]])
+                (_, val) <- eval env2 (List [Id "+", Id "a", Id "b"])
+                return val
+        result `shouldBe` Right (LispNumber 3)
+
+    it "define -> allows redefinition" $ do
+        let result = do
+                (env1, _) <- eval initialEnv (List [Id "define", Id "x", LispNumber 1])
+                (env2, _) <- eval env1 (List [Id "define", Id "x", LispNumber 2])
+                (_, val) <- eval env2 (Id "x")
+                return val
+        result `shouldBe` Right (LispNumber 2)
+
+    it "define -> error on missing value expression" $ do
+        eval initialEnv (List [Id "define", Id "x"]) `shouldSatisfy` isLeft
+
+    it "define -> error on too many arguments" $ do
+        eval initialEnv (List [Id "define", Id "x", LispNumber 1, LispNumber 2]) 
+            `shouldSatisfy` isLeft
+
+    it "define -> recursive function" $ do
+        let factDef = List [Id "define", List [Id "fact", Id "n"],
+                    List [Id "if", List [Id "=", Id "n", LispNumber 0],
+                          LispNumber 1,
+                          List [Id "*", Id "n", List [Id "fact", List [Id "-", Id "n", LispNumber 1]]]]]
+        let result = do
+                (env1, _) <- eval initialEnv factDef
+                (_, val) <- eval env1 (List [Id "fact", LispNumber 5])
+                return val
+        result `shouldBe` Right (LispNumber 120)
